@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -e
+
+if [ "$#" -ne 9 ]; then
+  echo "Uso: $0 top1 top2 top3 top4 bottom1 bottom2 bottom3 bottom4 out.pdf"
+  exit 1
+fi
+
+TOP1="$3"
+TOP2="$4"
+TOP3="$5"
+TOP4="$6"
+BOT1="$7"
+BOT2="$8"
+BOT3="$2"
+BOT4="$1"
+OUT="$9"
+
+# A4 300 DPI
+A4_W=2480
+A4_H=3508
+
+CELL_W=$((A4_W/4))
+CELL_H=$((A4_H/2))
+
+if ! command -v convert >/dev/null 2>&1; then
+  echo "ImageMagick (convert) não encontrado."
+  exit 1
+fi
+
+TMPDIR=$(mktemp -d)
+trap "rm -rf '$TMPDIR'" EXIT
+
+prepare_fit() {
+  local in="$1"; local out="$2"
+  # Redimensiona para caber dentro da célula (fit), mantendo proporção, e centra em fundo branco do tamanho da célula.
+  convert "$in" -resize ${CELL_W}x${CELL_H} -gravity center -background black -extent ${CELL_W}x${CELL_H} "$out"
+}
+
+prepare_fit "$TOP1"  "$TMPDIR/t1.png"
+prepare_fit "$TOP2"  "$TMPDIR/t2.png"
+prepare_fit "$TOP3"  "$TMPDIR/t3.png"
+prepare_fit "$TOP4"  "$TMPDIR/t4.png"
+prepare_fit "$BOT1"  "$TMPDIR/b1.png"
+prepare_fit "$BOT2"  "$TMPDIR/b2.png"
+prepare_fit "$BOT3"  "$TMPDIR/b3.png"
+prepare_fit "$BOT4"  "$TMPDIR/b4.png"
+
+# cria A4 branco
+convert -size ${A4_W}x${A4_H} xc:white "$TMPDIR/a4_base.png"
+
+# posições
+for col in 0 1 2 3; do X[$col]=$((col * CELL_W)); done
+Y_TOP=0
+Y_BOT=$CELL_H
+
+# coloca top row rotacionada 180
+convert "$TMPDIR/a4_base.png" \
+  \( "$TMPDIR/t4.png" -rotate 180 \) -geometry +${X[0]}+${Y_TOP} -composite \
+  \( "$TMPDIR/t3.png" -rotate 180 \) -geometry +${X[1]}+${Y_TOP} -composite \
+  \( "$TMPDIR/t2.png" -rotate 180 \) -geometry +${X[2]}+${Y_TOP} -composite \
+  \( "$TMPDIR/t1.png" -rotate 180 \) -geometry +${X[3]}+${Y_TOP} -composite \
+  "$TMPDIR/a4_step1.png"
+
+# coloca bottom row (sem rotação)
+convert "$TMPDIR/a4_step1.png" \
+  \( "$TMPDIR/b1.png" \) -geometry +${X[0]}+${Y_BOT} -composite \
+  \( "$TMPDIR/b2.png" \) -geometry +${X[1]}+${Y_BOT} -composite \
+  \( "$TMPDIR/b3.png" \) -geometry +${X[2]}+${Y_BOT} -composite \
+  \( "$TMPDIR/b4.png" \) -geometry +${X[3]}+${Y_BOT} -composite \
+  "$TMPDIR/a4_final.png"
+
+# desenha linhas de corte finas (opcional)
+LINE_COLOR="black"
+LINE_WIDTH=2
+for i in 1 2 3; do
+  x=$((i * CELL_W))
+  convert "$TMPDIR/a4_final.png" -stroke $LINE_COLOR -strokewidth $LINE_WIDTH -draw "line $x,0 $x,$A4_H" "$TMPDIR/a4_final.png"
+done
+convert "$TMPDIR/a4_final.png" -stroke $LINE_COLOR -strokewidth $LINE_WIDTH -draw "line 0,$CELL_H $A4_W,$CELL_H" "$TMPDIR/a4_final.png"
+
+convert "$TMPDIR/a4_final.png" -quality 100 -density 300 "$OUT"
+
+echo "Gerado: $OUT"
