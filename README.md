@@ -1,0 +1,1 @@
+Esses sao codigos que criei com auxilio da IA (gemini, ChatGPT e Duckduckgo AI) para dar conta do uso que faço na criação de conteúdos artísticos com compuatdor pela linha de comando abrindo o minimo programas GUI possiveis, automatizando a criação por meio de scripts e comando em programas CLI.  
