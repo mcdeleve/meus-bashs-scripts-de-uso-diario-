@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+# Verifica argumentos
+if [ "$#" -ne 2 ]; then
+  echo "Uso: $0 input.jpg output.jpg"
+  exit 1
+fi
+
+INPUT="$1"
+OUTPUT="$2"
+
+# Verifica entrada
+if [ ! -f "$INPUT" ]; then
+  echo "Erro: arquivo de entrada não encontrado: $INPUT"
+  exit 1
+fi
+
+# Processo SEM corte
+convert "$INPUT" \
+  -resize 1080x1920\> \
+  -resize 1080x1920\< \
+  -repage +0+0 \
+  -background black \
+  -gravity center \
+  -extent 1080x1920 \
+  "$OUTPUT"
+
+echo "Imagem processada sem cortes: $OUTPUT"

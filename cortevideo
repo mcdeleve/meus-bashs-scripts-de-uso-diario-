@@ -1,0 +1,22 @@
+#!/bin/bash
+
+URL=$1
+INICIO=$2
+DURACAO=$3
+SAIDA=$4
+
+if [ "$#" -ne 4 ]; then
+    echo "Uso: $0 <URL> <INICIO> <DURACAO> <SAIDA>"
+    exit 1
+fi
+
+# Calcula o fim usando 'bc' para aceitar decimais (ex: 39.4)
+FIM=$(echo "$INICIO + $DURACAO" | bc)
+
+# O yt-dlp baixa o trecho aproximado e o FFmpeg faz o corte cirúrgico
+yt-dlp "$URL" \
+    --download-sections "*$INICIO-$FIM" \
+    --force-keyframes-at-cuts \
+    --external-downloader ffmpeg \
+    --external-downloader-args "ffmpeg_i:-ss $INICIO -t $DURACAO" \
+    -o "$SAIDA"

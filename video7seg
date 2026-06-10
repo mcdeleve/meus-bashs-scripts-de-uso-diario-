@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+
+# ===== CONFIGURAÇÕES FIXAS =====
+DURACAO=7
+FADE=0.5
+FPS=30
+
+# ===== ENTRADA =====
+IMAGEM="$1"
+
+if [[ -z "$IMAGEM" ]]; then
+  echo "Uso: $0 imagem.jpg"
+  exit 1
+fi
+
+if [[ ! -f "$IMAGEM" ]]; then
+  echo "Erro: arquivo '$IMAGEM' não encontrado."
+  exit 1
+fi
+
+# ===== SAÍDA =====
+NOME_BASE="$(basename "$IMAGEM")"
+NOME_BASE="${NOME_BASE%.*}"
+SAIDA="${NOME_BASE}.mp4"
+
+# ===== CÁLCULO DO INÍCIO DO FADE OUT =====
+FADE_OUT_START=$(awk "BEGIN { print $DURACAO - $FADE }")
+
+# ===== FFmpeg =====
+ffmpeg -y -loop 1 -framerate "$FPS" -i "$IMAGEM" \
+-vf "fade=t=in:st=0:d=${FADE},fade=t=out:st=${FADE_OUT_START}:d=${FADE}" \
+-t "$DURACAO" \
+-c:v libx264 -pix_fmt yuv420p "$SAIDA"
+
+echo "Vídeo criado: $SAIDA"

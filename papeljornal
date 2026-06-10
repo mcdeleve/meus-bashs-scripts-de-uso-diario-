@@ -1,0 +1,16 @@
+#!/bin/bash
+
+read -e -p "Imagem: " IMG
+
+OUT="${IMG%.*}_jornal.jpg"
+
+convert "$IMG" \
+-colorspace Gray \
+-resize 200% \
+-gaussian-blur 0x1 \
+-ordered-dither o8x8 \
+-threshold 55% \
+-resize 50% \
+"$OUT"
+
+echo "Gerado: $OUT"

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+
+# ===== CONFIGURAÇÕES FIXAS =====
+DURACAO=7
+FADE=0.5
+FPS=30
+
+# ===== ENTRADA =====
+IMAGEM="$1"
+AUDIO="$2"
+AUDIO_INICIO="$3"   # formato: HH:MM:SS ou segundos (ex: 65.5)
+
+if [[ -z "$IMAGEM" || -z "$AUDIO" || -z "$AUDIO_INICIO" ]]; then
+  echo "Uso: $0 imagem.jpg audio.mp3 inicio_audio"
+  echo "Exemplo: $0 foto.png musica.mp3 01:23.5"
+  exit 1
+fi
+
+if [[ ! -f "$IMAGEM" ]]; then
+  echo "Erro: imagem '$IMAGEM' não encontrada."
+  exit 1
+fi
+
+if [[ ! -f "$AUDIO" ]]; then
+  echo "Erro: áudio '$AUDIO' não encontrado."
+  exit 1
+fi
+
+# ===== SAÍDA =====
+NOME_BASE="$(basename "$IMAGEM")"
+NOME_BASE="${NOME_BASE%.*}"
+SAIDA="${NOME_BASE}.mp4"
+
+# ===== CÁLCULO DO FADE OUT =====
+FADE_OUT_START=$(awk "BEGIN { print $DURACAO - $FADE }")
+
+# ===== FFmpeg =====
+ffmpeg -y \
+-loop 1 -framerate "$FPS" -i "$IMAGEM" \
+-ss "$AUDIO_INICIO" -t "$DURACAO" -i "$AUDIO" \
+-vf "fade=t=in:st=0:d=${FADE},fade=t=out:st=${FADE_OUT_START}:d=${FADE}" \
+-c:v libx264 -pix_fmt yuv420p \
+-c:a aac -b:a 192k -shortest \
+-t "$DURACAO" \
+"$SAIDA"
+
+echo "Vídeo criado: $SAIDA"

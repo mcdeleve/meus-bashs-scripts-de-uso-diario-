@@ -1,0 +1,40 @@
+#!/bin/bash
+# Converter CBR colorido em preto e branco (escala de cinza)
+
+ARQUIVO="$1"
+
+if [ -z "$ARQUIVO" ]; then
+    echo "Uso: $0 arquivo.cbr"
+    exit 1
+fi
+
+# Verifica se unrar está instalado
+if ! command -v unrar &> /dev/null; then
+    echo "Erro: 'unrar' não encontrado. Instale com: sudo apt install unrar"
+    exit 1
+fi
+
+# Nome base
+BASE="${ARQUIVO%.cbr}"
+DIR="${BASE}_tmp"
+
+# Extrai imagens
+mkdir -p "$DIR"
+unrar x -inul "$ARQUIVO" "$DIR/"
+
+# Converte todas as imagens em escala de cinza
+for img in "$DIR"/*.{jpg,jpeg,png,webm,webp}; do
+    [ -e "$img" ] || continue
+    echo "Convertendo $img..."
+    convert "$img" -colorspace Gray "$img"
+done
+
+# Recria CBR
+cd "$DIR"
+rar a -m5 -ep1 "../${BASE}_pb.cbr" * > /dev/null
+cd ..
+
+# Limpa arquivos temporários
+rm -rf "$DIR"
+
+echo "Pronto! Arquivo convertido: ${BASE}_pb.cbr"

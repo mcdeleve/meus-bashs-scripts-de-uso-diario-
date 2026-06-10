@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# 1. Verifica se a frase foi fornecida
+if [ -z "$1" ]; then
+    echo "Erro: Forneça uma frase entre aspas."
+    echo "Uso: $0 \"Sua frase aqui\""
+    exit 1
+fi
+
+FRASE="$1"
+
+# 2. Caminho exato e fixo da sua fonte Gotham Ultra Italic
+FONTE="/usr/share/fonts/Gotham-UltraItalic.otf"
+
+# 3. Detecta a pasta oficial de Imagens do seu sistema
+if [ -d "$HOME/Imagens" ]; then
+    PASTA_DESTINO="$HOME/Imagens"
+elif [ -d "$HOME/Pictures" ]; then
+    PASTA_DESTINO="$HOME/Pictures"
+else
+    PASTA_DESTINO="$HOME/Imagens"
+    mkdir -p "$PASTA_DESTINO"
+fi
+
+OUTPUT_NAME="output_$(date +%Y%m%d_%H%M%S).png"
+
+echo "Processando imagem com a fonte Gotham Ultra Italic..."
+
+# 4. Executa o comando ImageMagick
+if convert \
+  -background black \
+  -fill white \
+  -font "$FONTE" \
+  -gravity center \
+  -size 1080x1080 \
+  caption:"$FRASE" \
+  -colorspace Gray \
+  -gaussian-blur 0x1 \
+  -ordered-dither o8x8 \
+  -threshold 55% \
+  "$PASTA_DESTINO/$OUTPUT_NAME" 2> erro_imagemagick.log; then
+    echo "✅ Sucesso! Imagem salva em: $PASTA_DESTINO/$OUTPUT_NAME"
+    rm -f erro_imagemagick.log
+else
+    echo "❌ Erro ao criar a imagem!"
+    echo "O ImageMagick respondeu o seguinte:"
+    cat erro_imagemagick.log
+fi

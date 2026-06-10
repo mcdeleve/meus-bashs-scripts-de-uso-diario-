@@ -1,0 +1,34 @@
+#!/bin/bash
+# Converter CBZ colorido em preto e branco (escala de cinza)
+
+ARQUIVO="$1"
+
+if [ -z "$ARQUIVO" ]; then
+    echo "Uso: $0 arquivo.cbz"
+    exit 1
+fi
+
+# Nome base
+BASE="${ARQUIVO%.cbz}"
+DIR="${BASE}_tmp"
+
+# Extrai imagens
+mkdir -p "$DIR"
+unzip -q "$ARQUIVO" -d "$DIR"
+
+# Converte todas as imagens em escala de cinza
+for img in "$DIR"/*.{jpg,jpeg,png,webm,webp}; do
+    [ -e "$img" ] || continue
+    echo "Convertendo $img..."
+    convert "$img" -colorspace Gray "$img"
+done
+
+# Recria CBZ
+cd "$DIR"
+zip -q -r "../${BASE}_pb.cbz" *
+cd ..
+
+# Limpa arquivos temporários
+rm -rf "$DIR"
+
+echo "Pronto! Arquivo convertido: ${BASE}_pb.cbz"

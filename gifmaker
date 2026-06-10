@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Configurações do Script
+URL=$1
+INICIO=$2    # Formato HH:MM:SS ou segundos
+DURACAO=$3   # Em segundos
+TEXTO=$4
+OUTPUT=${5:-"resultado.gif"}
+
+if [ -z "$URL" ] || [ -z "$INICIO" ] || [ -z "$DURACAO" ]; then
+    echo "Uso: ./yt2gif.sh <url> <inicio> <duracao> '<texto>' [nome_arquivo.gif]"
+    exit 1
+fi
+
+echo "Processando vídeo..."
+
+# Obtém a URL do stream com yt-dlp
+STREAM_URL=$(yt-dlp -f "bestvideo[height<=720]" -g "$URL")
+
+# Executa o FFmpeg
+ffmpeg -ss "$INICIO" -t "$DURACAO" -i "$STREAM_URL" \
+-vf "fps=12,scale=480:-1:flags=lanczos,drawtext=text='$TEXTO':fontcolor=white:fontsize=24:borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-th-20,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse" \
+-loop 0 "$OUTPUT"
+
+echo "Concluído! GIF salvo como: $OUTPUT"

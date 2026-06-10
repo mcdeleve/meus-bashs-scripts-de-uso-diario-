@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Verifica se o argumento foi passado
+if [ -z "$1" ]; then
+    echo "Uso: $0 arquivo_de_entrada"
+    exit 1
+fi
+
+INPUT="$1"
+DIR=$(dirname "$INPUT")
+FILENAME=$(basename "$INPUT" | cut -d. -f1)
+
+# Executa o FFmpeg salvando no mesmo diretório
+ffmpeg -i "$INPUT" -vf "hue=s=0,scale=360:-1,drawtext=fontfile='/usr/share/fonts/Gotham-UltraItalic.otf':text='low res life':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2" -c:a copy "$DIR/${FILENAME}_bw.mp4"
+
+echo "Processo concluído: $DIR/${FILENAME}_bw.mp4"

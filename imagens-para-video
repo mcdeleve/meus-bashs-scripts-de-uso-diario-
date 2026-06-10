@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# ===== PARÂMETROS FIXOS =====
+DURACAO_IMAGEM="2.5"
+EXTENSAO="jpg"
+FPS_SAIDA=30
+# ===========================
+
+# ===== USO =====
+if [ $# -lt 2 ]; then
+  echo "Uso:"
+  echo "  $0 /caminho/audio.mp3 HH:MM:SS"
+  echo "Exemplo:"
+  echo "  $0 /musicas/trilha.mp3 00:01:30"
+  exit 1
+fi
+
+AUDIO_PATH="$1"
+AUDIO_START="$2"
+OUTPUT="$(basename "$PWD").mp4"
+
+# ===== VALIDAÇÕES =====
+if [ ! -f "$AUDIO_PATH" ]; then
+  echo "Erro: arquivo de áudio não encontrado."
+  exit 1
+fi
+
+COUNT=$(ls *.$EXTENSAO 2>/dev/null | wc -l)
+if [ "$COUNT" -lt 2 ]; then
+  echo "Erro: é necessário ao menos duas imagens .$EXTENSAO"
+  exit 1
+fi
+
+FRAMERATE=$(awk "BEGIN {print 1/$DURACAO_IMAGEM}")
+
+# ===== FFmpeg =====
+ffmpeg \
+-framerate "$FRAMERATE" \
+-f image2 -pattern_type glob -i "*.$EXTENSAO" \
+-ss "$AUDIO_START" -i "$AUDIO_PATH" \
+-vf format=yuv420p \
+-c:v libx264 \
+-r "$FPS_SAIDA" \
+-pix_fmt yuv420p \
+-map 0:v -map 1:a \
+-shortest \
+"$OUTPUT"
+
