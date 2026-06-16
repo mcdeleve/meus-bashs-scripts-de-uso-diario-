@@ -80,4 +80,13 @@ selecione oito imagens e as coloque de modo que esteja pronto para cortar em for
 feito para as imagens geradas com o comando 'frase-imagem' mas funciona com qualquer imagem, mas lembre que pode ficar pequena demais a imagem. 
 Uso: /usr/bin/zine top1 top2 top3 top4 bottom1 bottom2 bottom3 bottom4 out.pdf
 
+PODCASTZIM...
+~imagemagick + ffmpeg~
+Junta uma imagem e um audio em mp3 e faz disso um video com a imagem em baixa resolução estilo papel jornal com audio normalizado. 
+
+IMAGEM_MEME...
+
+~imagemagick + ffmpeg~
+Pega uma imagem de qualquer tamanho, transforma em uma imagem 1920x1080 para reels/story em estilo papel jornal, junta essa imagem a um audio em que se especifica a minutagem de entrada desse áudio e solta $OUT video de 7 segundo com fade in e fade out.
+
 
