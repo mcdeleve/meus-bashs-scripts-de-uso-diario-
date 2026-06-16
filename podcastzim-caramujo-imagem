@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -ne 3 ]; then
+  echo "Uso: $0 input_image input_audio output_video"
+  exit 1
+fi
+
+IMG="$1"
+AUD="$2"
+OUT="$3"
+
+# requisitos: convert (ImageMagick), ffmpeg, ffprobe
+for cmd in convert ffmpeg ffprobe; do
+  command -v "$cmd" >/dev/null || { echo "$cmd é necessário"; exit 1; }
+done
+
+# detectar sample rate do áudio (fallback 44100)
+SR=$(ffprobe -v error -select_streams a:0 -show_entries stream=sample_rate -of default=noprint_wrappers=1:nokey=1 "$AUD" || true)
+SR=${SR:-44100}
+
+# processar imagem com exatamente os filtros solicitados (convert)
+TMPIMG="$(mktemp --suffix=.png)"
+trap 'rm -f "$TMPIMG"' EXIT
+
+convert "$IMG" \
+  -colorspace Gray \
+  -resize 200% \
+  -gaussian-blur 0x1 \
+  -ordered-dither o8x8 \
+  -threshold 55% \
+  -resize 50% \
+  "$TMPIMG"
+
+# combinar imagem processada e áudio com ffmpeg
+# áudio: atempo=1.5 (tempo) then asetrate=SR*1.5 + aresample=SR (pitch up x1.5 while keeping new duration)
+ffmpeg -y -loop 1 -framerate 30 -i "$TMPIMG" -i "$AUD" \
+  -filter_complex "[1:a]aformat=sample_fmts=fltp:sample_rates=${SR}:channel_layouts=stereo,atempo=1.2,asetrate=${SR}*1.5,loudnorm=I=-16:LRA=7:TP=-1:print_format=summary,aresample=${SR}[a]" \
+  -map 0:v -map "[a]" \
+  -c:v libx264 -preset medium -crf 18 -r 30 -pix_fmt yuv420p -c:a aac -b:a 64k -shortest "$OUT"
+

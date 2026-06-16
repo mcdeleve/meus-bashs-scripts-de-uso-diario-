@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Configurações ffmpeg
+DURACAO=7
+FADE=0.5
+FPS=30
+
+usage() {
+  cat <<EOF
+Uso:
+  $0 [--overwrite] imagem [saida_imagem] audio inicio_audio
+  Exemplos:
+    $0 "foto.png" musica.mp3 00:01:23.5
+    $0 "foto.png" "saida.jpg" musica.mp3 65.5
+Opções:
+  --overwrite    Sobrescrever saída sem perguntar.
+EOF
+  exit 1
+}
+
+overwrite=false
+if [ "${1:-}" = "--overwrite" ]; then overwrite=true; shift; fi
+
+if [ "$#" -lt 3 ] || [ "$#" -gt 4 ]; then usage; fi
+
+if [ "$#" -eq 3 ]; then
+  INPUT_IMG="$1"
+  FINAL_IMG=""
+  AUDIO="$2"
+  AUDIO_INICIO="$3"
+else
+  INPUT_IMG="$1"
+  FINAL_IMG="$2"
+  AUDIO="$3"
+  AUDIO_INICIO="$4"
+fi
+
+[ -f "$INPUT_IMG" ] || { echo "Erro: arquivo de imagem não encontrado: $INPUT_IMG" >&2; exit 1; }
+[ -f "$AUDIO" ] || { echo "Erro: arquivo de áudio não encontrado: $AUDIO" >&2; exit 1; }
+
+TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+TMP1="$TMPDIR/step1_$(basename "$INPUT_IMG")"
+TMP2="$TMPDIR/step2_$(basename "$INPUT_IMG")"
+
+# Step 1: efeito "jornal"
+convert "$INPUT_IMG" \
+  -colorspace Gray \
+  -resize 200% \
+  -gaussian-blur 0x1 \
+  -ordered-dither o8x8 \
+  -threshold 55% \
+  -resize 50% \
+  "$TMP1"
+
+# Step 2: ajuste sem corte para 1080x1920
+convert "$TMP1" \
+  -resize 1080x1920\> \
+  -resize 1080x1920\< \
+  -repage +0+0 \
+  -background black \
+  -gravity center \
+  -extent 1080x1920 \
+  "$TMP2"
+
+if [ -n "$FINAL_IMG" ]; then
+  OUT_IMG="$FINAL_IMG"
+else
+  EXT="${INPUT_IMG##*.}"
+  BASE="${INPUT_IMG%.*}"
+  OUT_IMG="${BASE}_final.${EXT}"
+fi
+
+if [ -f "$OUT_IMG" ] && [ "$overwrite" != true ]; then
+  read -r -p "Arquivo $OUT_IMG existe. Sobrescrever? [y/N] " ans
+  case "$ans" in [Yy]*) :;; *) echo "Cancelado."; exit 0;; esac
+fi
+
+mv -f "$TMP2" "$OUT_IMG"
+echo "Imagem final gerada: $OUT_IMG"
+
+# Prepara saída de vídeo
+NOME_BASE="$(basename "$OUT_IMG")"
+NOME_BASE="${NOME_BASE%.*}"
+SAIDA="${NOME_BASE}.mp4"
+
+FADE_OUT_START=$(awk "BEGIN { print $DURACAO - $FADE }")
+
+# Filtro extra para baixa resolução e texto
+# Ajuste da fonte: altere o caminho se necessário
+FONT="/usr/share/fonts/Gotham-UltraItalic.otf"
+DRAWTEXT="drawtext=fontfile='${FONT}':text='low res life':fontcolor=white:fontsize=24:x=(w-text_w)/2:y=(h-text_h)/2"
+
+# Combina filtros: fades + dessaturação/escala/drawtext
+VF_FILTER="fade=t=in:st=0:d=${FADE},fade=t=out:st=${FADE_OUT_START}:d=${FADE},hue=s=0,scale=360:-1,${DRAWTEXT}"
+
+ffmpeg -y \
+  -loop 1 -framerate "$FPS" -i "$OUT_IMG" \
+  -ss "$AUDIO_INICIO" -t "$DURACAO" -i "$AUDIO" \
+  -vf "$VF_FILTER" \
+  -c:v libx264 -pix_fmt yuv420p \
+  -c:a aac -b:a 192k -shortest \
+  -t "$DURACAO" \
+  "$SAIDA"
+
+echo "Vídeo criado: $SAIDA"
