@@ -1,0 +1,13 @@
+#!/bin/bash
+# Script para baixar apenas o áudio de um vídeo usando yt-dlp
+# Uso: ./baixar_audio.sh NOME_DO_ARQUIVO URL
+
+NOME=$1
+URL=$2
+
+if [ -z "$NOME" ] || [ -z "$URL" ]; then
+    echo "Uso: $0 NOME_DO_ARQUIVO URL"
+    exit 1
+fi
+
+yt-dlp -x --audio-format mp3 --audio-quality 9 -o "${NOME}.%(ext)s" "$URL"
