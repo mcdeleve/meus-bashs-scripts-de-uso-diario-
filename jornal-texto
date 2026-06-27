@@ -1,0 +1,41 @@
+#!/bin/bash
+set -e
+
+read -e -p "Imagem: " IMG
+read -e -p "Frase: " TEXT
+
+FONT="/usr/share/fonts/Gotham-UltraItalic.otf"
+OUT="${IMG%.*}_jornal.jpg"
+
+# Tenta pegar dimensões da imagem (no caso, a imagem final após o processamento abaixo)
+# Vamos desenhar depois de gerar uma imagem intermediária.
+TMP="$(mktemp --suffix=.jpg)"
+
+convert "$IMG" \
+  -colorspace Gray \
+  -resize 200% \
+  -gaussian-blur 0x1 \
+  -ordered-dither o8x8 \
+  -threshold 55% \
+  -resize 50% \
+  "$TMP"
+
+# Dimensões da imagem TMP
+W=$(identify -format "%w" "$TMP")
+H=$(identify -format "%h" "$TMP")
+
+# Ajuste fino: tamanho da fonte como fração da altura
+# (0.06 => ~6% da altura; ajuste se quiser maior/menor)
+FS=$(awk "BEGIN{printf \"%d\", $H*0.06}")
+
+convert "$TMP" \
+  -font "$FONT" \
+  -pointsize "$FS" \
+  -fill white \
+  -gravity center \
+  -annotate +0+0 "$TEXT" \
+  "$OUT"
+
+rm -f "$TMP"
+echo "Gerado: $OUT"
+
